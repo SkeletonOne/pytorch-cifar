@@ -1,5 +1,5 @@
 # Train CIFAR10 with PyTorch
-Many thanks for kuangliu/pytorch-cifar
+Many thanks for kuangliu/pytorch-cifar, akamaster/pytorch_resnet_cifar10, HtutLynn in kuangliu/pytorch-cifar/issues/45 !
 
 ## Prerequisites
 - Python 3.6+
