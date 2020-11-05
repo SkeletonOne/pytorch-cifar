@@ -1,5 +1,6 @@
 '''Train CIFAR10 with PyTorch.'''
 import torch
+import logging
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
@@ -20,6 +21,9 @@ from utils import progress_bar
 import numpy as np
 import time
 import copy
+
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+logging.basicConfig(filename=time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())+'.log', level=logging.DEBUG, format=LOG_FORMAT, filemode='w')
 
 # Data
 def load_data(dataset):
@@ -84,6 +88,7 @@ def train(net, optimizer, criterion, dataloader, epoch):
 
         progress_bar(batch_idx, len(dataloader), 'Train Loss: %.3f | Train Acc: %.3f%% (%d/%d)'
                      % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+    logging.info('Epoch: %d | Train Loss: %.3f | Train Acc: %.3f%% (%d/%d)' % (epoch, train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 # Testing
 def test(net, criterion, dataloader, epoch):
@@ -114,7 +119,7 @@ def test(net, criterion, dataloader, epoch):
 
             progress_bar(batch_idx, len(dataloader), 'Test Loss: %.3f | Test Acc: %.3f%% (%d/%d)'
                          % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
+    logging.info('Epoch: %d | Test Loss: %.3f | Test Acc: %.3f%% (%d/%d)' % (epoch, test_loss/(batch_idx+1), 100.*correct/total, correct, total))
     current_loss = test_loss/len(dataloader)
     # save checkpoint
     acc = 100. * correct/total
@@ -129,8 +134,7 @@ def test(net, criterion, dataloader, epoch):
         }
         if not os.path.isdir('checkpoints'):
             os.mkdir('checkpoints')
-        net_name = net.__class__.__name__
-        save_path = "./checkpoints/{}_acc_{:.3f}_loss_{:.3f}.pth".format(net_name, acc, current_loss)
+        save_path = "./checkpoints/epoch_{}_acc_{:.3f}_loss_{:.3f}.pth".format(str(epoch), acc, current_loss)
         torch.save(state, save_path)
         
         best_accuracy = acc
@@ -144,10 +148,14 @@ def train_and_evaluate(net, trainloader, testloader, optimizer, scheduler, crite
 
         # compute number of batches in one epoch(one full pass over the training set)
         train(net, optimizer, criterion, trainloader, epoch)
-        lr_ = scheduler.get_last_lr()
-        print("Learning rate: ", torch.tensor(lr_))        
-        writer.add_scalar('Learning rate', torch.tensor(lr_))
-        
+        # The function of getting the current lr in the lr_scheduler has changed from get_lr() to get_last_lr() 
+        if torch.__version__ < '1.4':
+            lr_ = scheduler.get_lr()
+        else:
+            lr_ = scheduler.get_last_lr()
+        logging.info('Learning_rate: %.4f' % (lr_[0]))        
+        writer.add_scalar('Learning_rate', torch.tensor(lr_))
+        # Update the scheduler after eac
         scheduler.step()
 
         # Evaluate for one epoch on test set
@@ -162,7 +170,7 @@ if __name__ == "__main__":
     parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
     parser.add_argument('--checkpoint', default=None, help='The checkpoint file (.pth)')
-    parser.add_argument('--epochs', default=300, help='The number of training epochs')
+    parser.add_argument('--epochs', default=200, help='The number of training epochs')
 
     args = parser.parse_args()
 
@@ -171,7 +179,7 @@ if __name__ == "__main__":
     # setup device for training
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # setup Tensorboard file path
-    writer = SummaryWriter('./summarys/resnet50')
+    writer = SummaryWriter('./summarys/'+args.net)
     # Configure the Network
 
     # Model
@@ -189,7 +197,7 @@ if __name__ == "__main__":
     # net = SENet18()
     # net = ShuffleNetV2(1)
     # net = EfficientNetB0()
-    net = ResNet50()
+    net = ResNet56()
     net = net.to(device)
 
     # Define loss, optimizer, lr scheduler
@@ -197,7 +205,7 @@ if __name__ == "__main__":
     optimizer = optim.SGD(net.parameters(), lr=args.lr,
                       momentum=0.9, weight_decay=5e-4)
     # The milestones mean update the lr AFTER the milestone epoch
-    scheduler = MultiStepLR(optimizer, milestones=[2, 3, 4], gamma=0.1)
+    scheduler = MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
 
     if device == 'cuda':
         net = torch.nn.DataParallel(net)
