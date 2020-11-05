@@ -28,3 +28,14 @@ Many thanks for kuangliu/pytorch-cifar, akamaster/pytorch_resnet_cifar10, HtutLy
 - [x] [Save to tensorboard]
 - [ ] [Select network in arguments]
 - [ ] [Support more datasets]
+
+## Training
+
+# Train from scratch
+```sh
+$ python main.py
+```
+# Resume training
+```sh
+$ python main.py --resume --checkpoint '/path/to/your/checkpoint'
+```
