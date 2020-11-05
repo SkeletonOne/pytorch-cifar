@@ -1,6 +1,5 @@
 # Train CIFAR10 with PyTorch
 Many thanks for kuangliu/pytorch-cifar
-I'm playing with [PyTorch](http://pytorch.org/) on the CIFAR10 dataset.
 
 ## Prerequisites
 - Python 3.6+
